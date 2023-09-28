@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# AWS region and instance details
+AWS_REGION="us-east-1"
+INSTANCE_TYPE="t2.micro"
+AMI_ID="ami-xxxxxxxxxxxxxxxxx"  # Replace with your desired AMI ID
+KEY_PAIR_NAME="your-key-pair-name"  # Replace with your key pair name
+SECURITY_GROUP_ID="sg-xxxxxxxxxxxxxxxxx"  # Replace with your security group ID
+SUBNET_ID="subnet-xxxxxxxxxxxxxxxxx"  # Replace with your subnet ID
+INSTANCE_NAME="MyEC2Instance"  # Replace with your desired instance name
+
+# Launch EC2 instance
+INSTANCE_ID=$(aws ec2 run-instances \
+  --region $AWS_REGION \
+  
+  --image-id $AMI_ID \
+  --instance-type $INSTANCE_TYPE \
+  --key-name $KEY_PAIR_NAME \
+  --security-group-ids $SECURITY_GROUP_ID \
+  --subnet-id $SUBNET_ID \
+  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$INSTANCE_NAME}]" \
+  --output json | jq -r '.Instances[0].InstanceId')
+
+echo "Instance ID: $INSTANCE_ID"
+
+# Wait for the instance to be in the 'running' state
+echo "Waiting for the instance to be in the 'running' state..."
+aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+echo "Instance is now running."
+
+# Get the public DNS name of the instance
+PUBLIC_DNS=$(aws ec2 describe-instances \
+  --region $AWS_REGION \
+  --instance-ids $INSTANCE_ID \
+  --query "Reservations[0].Instances[0].PublicDnsName" \
+  --output text)
+
+echo "Public DNS: $PUBLIC_DNS"
